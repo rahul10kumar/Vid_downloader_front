@@ -5,45 +5,74 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Video Downloader</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+  body { background-color: #f8f9fa; }
+  #videoInfo ul { margin-top: 1rem; }
+</style>
 </head>
 <body class="p-5">
 
 <div class="container">
-  <h1 class="mb-4">YouTube Video Downloader</h1>
-  <input id="url" type="text" class="form-control mb-3" placeholder="Enter YouTube URL">
-  <button id="fetch" class="btn btn-primary mb-3">Get Video</button>
+  <h1 class="mb-4 text-center">YouTube Video Downloader</h1>
+  
+  <div class="mb-3">
+    <input id="url" type="text" class="form-control" placeholder="Enter YouTube URL">
+  </div>
+  <div class="mb-3 text-center">
+    <button id="fetch" class="btn btn-primary">Get Video</button>
+  </div>
 
   <div id="videoInfo"></div>
 </div>
 
 <script>
+const SERVER_URL = 'https://video-downloader-az9r.onrender.com';
+
 document.getElementById('fetch').addEventListener('click', async () => {
-  const url = document.getElementById('url').value;
+  const url = document.getElementById('url').value.trim();
   if (!url) return alert('Enter a YouTube URL');
 
-  const res = await fetch('/getVideo', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url })
-  });
-  const data = await res.json();
-  if (data.error) return alert(data.error);
-
   const infoDiv = document.getElementById('videoInfo');
-  infoDiv.innerHTML = `<h3>${data.title}</h3><p>By ${data.author}</p>`;
-  
-  const list = document.createElement('ul');
-  list.classList.add('list-group');
+  infoDiv.innerHTML = '<p class="text-muted">Fetching video info...</p>';
 
-  data.formats.forEach(f => {
-    const li = document.createElement('li');
-    li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center');
-    li.innerHTML = `${f.quality} (${f.container}) - ${f.size} <a class="btn btn-sm btn-success" href="/download?url=${encodeURIComponent(url)}&itag=${f.itag}">Download</a>`;
-    list.appendChild(li);
-  });
+  try {
+    const res = await fetch(`${SERVER_URL}/getVideo`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
 
-  infoDiv.appendChild(list);
+    const data = await res.json();
+    if (data.error) {
+      infoDiv.innerHTML = `<p class="text-danger">${data.error}</p>`;
+      return;
+    }
+
+    infoDiv.innerHTML = `
+      <h3>${data.title}</h3>
+      <p>By ${data.author}</p>
+    `;
+
+    const list = document.createElement('ul');
+    list.classList.add('list-group');
+
+    data.formats.forEach(f => {
+      const li = document.createElement('li');
+      li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center', 'flex-wrap');
+      li.innerHTML = `
+        <div>${f.quality} (${f.container}) - ${f.size}</div>
+        <a class="btn btn-sm btn-success mt-2 mt-md-0" href="${SERVER_URL}/download?url=${encodeURIComponent(url)}&itag=${f.itag}">Download</a>
+      `;
+      list.appendChild(li);
+    });
+
+    infoDiv.appendChild(list);
+
+  } catch (err) {
+    infoDiv.innerHTML = `<p class="text-danger">Error fetching video info: ${err.message}</p>`;
+  }
 });
 </script>
+
 </body>
 </html>
